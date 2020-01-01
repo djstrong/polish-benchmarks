@@ -1,5 +1,7 @@
+import logging
 import random
 from argparse import ArgumentParser
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -10,13 +12,11 @@ from typing import List
 
 # 1. get the corpus
 import flair.datasets
+from flair.training_utils import add_file_handler
+
+from polish_benchmarks.helpers import ConstEmbeddings, PositionalEmbeddings
 
 parser = ArgumentParser(description='Train')
-# parser.add_argument('--train_corpus', default='../inforex-data-conversion/tmp/conll_full/train_files.conll', help='path to train JSONL corpus')
-# parser.add_argument('--test_corpus', default='../inforex-data-conversion/tmp/conll_full/test_files.conll', help='path to test JSONL corpus')
-
-# parser.add_argument('--forward_model_path', default='polish-forward', help='Flair forward model')
-# parser.add_argument('--backward_model_path', default='polish-backward', help='Flair backward model')
 
 parser.add_argument('task', choices=['wikiner', 'ud_pos', 'ud_upos'], help='task')
 parser.add_argument('--hidden_size', default=256, type=int, help='size of embedding projection')
@@ -34,7 +34,17 @@ parser.add_argument('--embeddings_storage_mode', default='gpu', choices=['none',
 parser.add_argument('--seed', default=0, type=int, help='seed')
 
 args = parser.parse_args()
-print(args)
+
+
+log = logging.getLogger("args")
+log.setLevel('INFO')
+base_path=args.output_folder
+if type(base_path) is str:
+    base_path = Path(base_path)
+log_handler = add_file_handler(log, base_path / "args.log")
+log.addHandler(logging.StreamHandler())
+
+log.info(str(args))
 
 torch.manual_seed(args.seed)
 random.seed(args.seed)
@@ -54,27 +64,39 @@ elif args.task == 'ud_pos':
     tag_type = 'pos'
 
 corpus = corpus.downsample(args.downsample)
-print(corpus)
-
+log.info(str(corpus))
 
 # 3. make the tag dictionary from the corpus
 tag_dictionary = corpus.make_tag_dictionary(tag_type=tag_type)
-print(tag_dictionary.idx2item)
+log.info(str(tag_dictionary.idx2item))
+
 
 # 4. initialize embeddings
 embedding_types: List[TokenEmbeddings] = [
-    BytePairEmbeddings('pl')
+    # ConstEmbeddings(),
+    PositionalEmbeddings()
+    # BytePairEmbeddings('pl')
     # WordEmbeddings('glove'),
 
-    # comment in this line to use character embeddings
     # CharacterEmbeddings(),
 
-    # comment in these lines to use flair embeddings
-    # FlairEmbeddings('news-forward'),
-    # FlairEmbeddings('news-backward'),
+    # FlairEmbeddings('polish-forward'),
+    # FlairEmbeddings('polish-backward'),
 ]
 
 embeddings: StackedEmbeddings = StackedEmbeddings(embeddings=embedding_types)
+
+log.info(f'Embeddings size: {embeddings.embedding_length}')
+log.info(f'Embeddings size: {embeddings}')
+
+def count_parameters(model, trainable=True):
+    if trainable:
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    else:
+        return sum(p.numel() for p in model.parameters() if not p.requires_grad)
+
+log.info(f'Trainable parameters of embeddings: {count_parameters(embeddings)}')
+log.info(f'Non-trainable parameters of embeddings: {count_parameters(embeddings, trainable=False)}')
 
 # 5. initialize sequence tagger
 from flair.models import SequenceTagger
@@ -84,6 +106,9 @@ tagger: SequenceTagger = SequenceTagger(hidden_size=args.hidden_size,
                                         tag_dictionary=tag_dictionary,
                                         tag_type=tag_type,
                                         use_crf=True)
+
+log.info(f'Trainable parameters of whole model: {count_parameters(tagger)}')
+log.info(f'Non-trainable parameters of whole model: {count_parameters(tagger, trainable=False)}')
 
 # 6. initialize trainer
 from flair.trainers import ModelTrainer

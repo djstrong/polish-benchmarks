@@ -33,6 +33,8 @@ parser.add_argument('--embeddings_storage_mode', default='gpu', choices=['none',
                     help='embeddings storage mode')
 parser.add_argument('--seed', default=0, type=int, help='seed')
 parser.add_argument('--embeddings', nargs='+', help='list of embeddings, e.g. flair-pl-forward', required=True)
+parser.add_argument('--wo_crf', action='store_false', help='without CRF (if many outputs)')
+
 args = parser.parse_args()
 
 log = logging.getLogger("args")
@@ -108,7 +110,7 @@ tagger: SequenceTagger = SequenceTagger(hidden_size=args.hidden_size,
                                         embeddings=embeddings,
                                         tag_dictionary=tag_dictionary,
                                         tag_type=tag_type,
-                                        use_crf=True)
+                                        use_crf=args.wo_crf)
 
 log.info(f'Trainable parameters of whole model: {count_parameters(tagger)}')
 log.info(f'Non-trainable parameters of whole model: {count_parameters(tagger, trainable=False)}')

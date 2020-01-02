@@ -5,7 +5,8 @@ from typing import List
 import flair
 import torch
 from flair.data import Sentence
-from flair.embeddings import TokenEmbeddings
+from flair.embeddings import TokenEmbeddings, FlairEmbeddings, BytePairEmbeddings, WordEmbeddings, CharacterEmbeddings, \
+    BertEmbeddings
 
 
 class ConstEmbeddings(TokenEmbeddings):
@@ -48,7 +49,7 @@ class PositionalEmbeddings(TokenEmbeddings):
         self.static_embeddings = True
 
         self.__embedding_length: int = 2
-        self.max_position=max_position
+        self.max_position = max_position
         super().__init__()
 
     @property
@@ -59,7 +60,7 @@ class PositionalEmbeddings(TokenEmbeddings):
     def get_cached_vec(self, token_idx: str) -> torch.Tensor:
         position_value = min(token_idx, self.max_position) * math.pi / 2 / self.max_position
         position_embedding = torch.tensor([math.cos(position_value), math.sin(position_value)], device=flair.device,
-                                dtype=torch.float)
+                                          dtype=torch.float)
         return position_embedding
 
     def _add_embeddings_internal(self, sentences: List[Sentence]) -> List[Sentence]:
@@ -72,3 +73,24 @@ class PositionalEmbeddings(TokenEmbeddings):
 
     def __str__(self):
         return self.name
+
+
+embedding_type = {
+    'flair': FlairEmbeddings,
+    'const': ConstEmbeddings,
+    'positional': PositionalEmbeddings,
+    'bpe': BytePairEmbeddings,
+    'we': WordEmbeddings,
+    'char': CharacterEmbeddings,
+    'bert': BertEmbeddings
+}
+
+
+def get_embeddings(name):
+    splitted = name.split('-', 1)
+    if len(splitted) == 2:
+        type, path = splitted
+        return embedding_type[type](path)
+    else:
+        type = splitted[0]
+        return embedding_type[type]()

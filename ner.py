@@ -19,7 +19,7 @@ from polish_benchmarks.helpers import get_embeddings
 
 parser = ArgumentParser(description='Train')
 
-parser.add_argument('task', choices=['wikiner', 'ud_pos', 'ud_upos'], help='task')
+parser.add_argument('task', choices=['wikiner', 'ud_pos', 'ud_upos','poleval_pos'], help='task')
 parser.add_argument('--hidden_size', default=256, type=int, help='size of embedding projection')
 parser.add_argument('--downsample', default=1.0, type=float, help='downsample ratio')
 parser.add_argument('--output_folder', default='dot1', help='output folder for log and model')
@@ -61,6 +61,14 @@ elif args.task == 'ud_upos':
     # 4       lewica  lewica  NOUN    subst:sg:nom:f  Case=Nom|Gender=Fem|Number=Sing 3       nsubj   3:nsubj SpaceAfter=No
 elif args.task == 'ud_pos':
     corpus: Corpus = flair.datasets.UD_POLISH()
+    tag_type = 'pos'
+elif args.task=='poleval_pos':
+    columns = {0: 'text', 1: 'space_before', 2: 'lemma', 3:'pos', 4:'tags'}
+    #sample 10% of train as dev
+    corpus: Corpus = flair.datasets.ColumnCorpus('datasets/pos/', columns,
+                                        train_file='nkjp.tsv',
+                                        test_file='poleval.tsv',
+                                        dev_file=None)
     tag_type = 'pos'
 
 corpus = corpus.downsample(args.downsample)

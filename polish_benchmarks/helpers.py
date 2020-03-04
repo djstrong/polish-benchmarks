@@ -6,7 +6,7 @@ import flair
 import torch
 from flair.data import Sentence
 from flair.embeddings import TokenEmbeddings, FlairEmbeddings, BytePairEmbeddings, WordEmbeddings, CharacterEmbeddings, \
-    BertEmbeddings
+    BertEmbeddings, XLMEmbeddings
 
 
 class ConstEmbeddings(TokenEmbeddings):
@@ -83,7 +83,8 @@ embedding_type = {
     'we': WordEmbeddings,
     'char': CharacterEmbeddings,
     'bert': BertEmbeddings,
-    'bertmix': lambda path:  BertEmbeddings(path, layers="0,1,2,3,4,5,6,7,8,9,10,11,12", use_scalar_mix=True)
+    'bertmix': lambda path:  BertEmbeddings(path, layers="0,1,2,3,4,5,6,7,8,9,10,11,12", use_scalar_mix=True),
+    'xlm': XLMEmbeddings,
 }
 
 
